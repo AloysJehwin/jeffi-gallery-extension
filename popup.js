@@ -24,29 +24,15 @@ chrome.storage.local.get(['apiUrl', 'adminToken'], ({ apiUrl, adminToken }) => {
 saveBtn.addEventListener('click', () => {
   const apiUrl = apiUrlInput.value.trim().replace(/\/$/, '')
   const adminToken = adminTokenInput.value.trim()
-  if (!apiUrl) { showStatus(status, 'API URL is required.', true); return }
-  if (!adminToken) { showStatus(status, 'Admin token is required.', true); return }
-  chrome.storage.local.set({ apiUrl, adminToken }, () => showStatus(status, 'Settings saved.', false))
+  if (!apiUrl) { showStatus('API URL is required.', true); return }
+  if (!adminToken) { showStatus('Admin token is required.', true); return }
+  chrome.storage.local.set({ apiUrl, adminToken }, () => showStatus('Settings saved.', false))
 })
 
-const nextNameInput = document.getElementById('nextName')
-const saveNameBtn = document.getElementById('saveName')
-const nameStatus = document.getElementById('nameStatus')
-
-chrome.storage.local.get(['pendingName'], ({ pendingName }) => {
-  if (pendingName) nextNameInput.value = pendingName
-})
-
-saveNameBtn.addEventListener('click', () => {
-  const name = nextNameInput.value.trim()
-  if (!name) { showStatus(nameStatus, 'Enter a name first.', true); return }
-  chrome.storage.local.set({ pendingName: name }, () => showStatus(nameStatus, 'Name set — now right-click an image.', false))
-})
-
-function showStatus(el, msg, isError) {
-  el.textContent = msg
-  el.className = isError ? 'error' : ''
-  setTimeout(() => { el.textContent = '' }, 2500)
+function showStatus(msg, isError) {
+  status.textContent = msg
+  status.className = isError ? 'error' : ''
+  setTimeout(() => { status.textContent = '' }, 2500)
 }
 
 function renderLogs() {

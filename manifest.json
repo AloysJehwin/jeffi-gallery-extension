@@ -3,7 +3,7 @@
   "name": "Jeffi Gallery Uploader",
   "version": "1.0.0",
   "description": "Right-click any image to save it to your Jeffi Stores gallery",
-  "permissions": ["contextMenus", "storage", "notifications"],
+  "permissions": ["contextMenus", "storage", "notifications", "windows"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
