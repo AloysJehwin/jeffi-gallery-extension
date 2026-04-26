@@ -8,27 +8,55 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      width: 320px;
-      padding: 16px;
+      width: 340px;
       background: #f9fafb;
       color: #111827;
     }
-    h1 {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 14px;
-      color: #1f2937;
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
     }
+    .header img { width: 28px; height: 28px; border-radius: 4px; }
+    .header h1 { font-size: 14px; font-weight: 700; color: #1f2937; }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fff;
+    }
+    .tab {
+      flex: 1;
+      padding: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+    .panel { display: none; padding: 14px 16px; }
+    .panel.active { display: block; }
+
     label {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       color: #374151;
       margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     input {
       width: 100%;
-      padding: 8px 10px;
+      padding: 7px 10px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       font-size: 12px;
@@ -38,9 +66,11 @@
       outline: none;
     }
     input:focus { border-color: #6366f1; }
-    button {
+    .hint { font-size: 11px; color: #9ca3af; margin-top: -6px; margin-bottom: 10px; }
+
+    button.primary {
       width: 100%;
-      padding: 9px;
+      padding: 8px;
       background: #6366f1;
       color: #fff;
       border: none;
@@ -49,28 +79,113 @@
       font-weight: 600;
       cursor: pointer;
     }
-    button:hover { background: #4f46e5; }
+    button.primary:hover { background: #4f46e5; }
     #status {
-      margin-top: 10px;
+      margin-top: 8px;
       font-size: 12px;
       text-align: center;
       min-height: 16px;
       color: #16a34a;
     }
     #status.error { color: #dc2626; }
+
+    .log-list { max-height: 320px; overflow-y: auto; }
+    .log-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #e5e7eb;
+      flex-shrink: 0;
+    }
+    .log-thumb-placeholder {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      background: #e5e7eb;
+      flex-shrink: 0;
+    }
+    .log-info { flex: 1; min-width: 0; }
+    .log-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .log-time { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .log-status {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .log-status.success { background: #dcfce7; color: #15803d; }
+    .log-status.error { background: #fee2e2; color: #b91c1c; }
+    .empty { text-align: center; color: #9ca3af; font-size: 12px; padding: 24px 0; }
+    .clear-btn {
+      font-size: 11px;
+      color: #6b7280;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      float: right;
+    }
+    .clear-btn:hover { color: #dc2626; }
   </style>
 </head>
 <body>
-  <h1>Jeffi Gallery Uploader</h1>
+  <div class="header">
+    <img src="icons/48.png" alt="logo" />
+    <h1>Jeffi Gallery Uploader</h1>
+  </div>
 
-  <label for="apiUrl">API URL</label>
-  <input type="url" id="apiUrl" placeholder="https://jeffistores.in" />
+  <div class="tabs">
+    <button class="tab active" data-tab="settings">Settings</button>
+    <button class="tab" data-tab="upload">Upload</button>
+    <button class="tab" data-tab="logs">Logs</button>
+  </div>
 
-  <label for="adminToken">Admin Token</label>
-  <input type="password" id="adminToken" placeholder="Paste token from Admin Settings" />
+  <div id="panel-settings" class="panel active">
+    <label for="apiUrl">API URL</label>
+    <input type="url" id="apiUrl" placeholder="https://jeffistores.in" />
 
-  <button id="save">Save Settings</button>
-  <div id="status"></div>
+    <label for="adminToken">Admin Token</label>
+    <input type="password" id="adminToken" placeholder="Paste token from Admin Settings" />
+
+    <button class="primary" id="save">Save Settings</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="panel-upload" class="panel">
+    <label for="nextName">Name for next upload</label>
+    <input type="text" id="nextName" placeholder="e.g. red-valve-50mm" />
+    <p class="hint">Right-click any image after setting a name here.</p>
+    <button class="primary" id="saveName">Set Name</button>
+    <div id="nameStatus"></div>
+  </div>
+
+  <div id="panel-logs" class="panel">
+    <div style="overflow:hidden;margin-bottom:8px;">
+      <span style="font-size:12px;font-weight:700;color:#374151;">Recent Uploads</span>
+      <button class="clear-btn" id="clearLogs">Clear</button>
+    </div>
+    <div class="log-list" id="logList">
+      <div class="empty">No uploads yet.</div>
+    </div>
+  </div>
 
   <script src="popup.js"></script>
 </body>

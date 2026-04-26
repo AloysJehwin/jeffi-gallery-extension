@@ -6,10 +6,18 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
+function pushLog(entry) {
+  chrome.storage.local.get(['uploadLogs'], ({ uploadLogs }) => {
+    const logs = uploadLogs || []
+    logs.unshift(entry)
+    chrome.storage.local.set({ uploadLogs: logs.slice(0, 50) })
+  })
+}
+
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== 'save-to-gallery') return
 
-  const { apiUrl, adminToken } = await chrome.storage.local.get(['apiUrl', 'adminToken'])
+  const { apiUrl, adminToken, pendingName } = await chrome.storage.local.get(['apiUrl', 'adminToken', 'pendingName'])
 
   if (!apiUrl || !adminToken) {
     chrome.notifications.create({
@@ -21,6 +29,11 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     return
   }
 
+  const srcUrl = info.srcUrl || ''
+  const autoName = pendingName || new URL(srcUrl).hostname + '-' + Date.now()
+
+  await chrome.storage.local.remove('pendingName')
+
   try {
     const res = await fetch(`${apiUrl}/api/gallery/upload`, {
       method: 'POST',
@@ -28,7 +41,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken}`,
       },
-      body: JSON.stringify({ imageUrl: info.srcUrl }),
+      body: JSON.stringify({ imageUrl: srcUrl, customName: autoName }),
     })
 
     if (!res.ok) {
@@ -36,13 +49,32 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
       throw new Error(err.error || `Server error ${res.status}`)
     }
 
+    const data = await res.json()
+
+    pushLog({
+      name: autoName,
+      sourceUrl: srcUrl,
+      thumbnailUrl: data.thumbnail_url || '',
+      timestamp: Date.now(),
+      status: 'success',
+    })
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/48.png',
       title: 'Jeffi Gallery',
-      message: 'Image saved to gallery.',
+      message: `Saved: ${autoName}`,
     })
   } catch (err) {
+    pushLog({
+      name: autoName,
+      sourceUrl: srcUrl,
+      thumbnailUrl: '',
+      timestamp: Date.now(),
+      status: 'error',
+      error: err instanceof Error ? err.message : 'Unknown error',
+    })
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/48.png',
