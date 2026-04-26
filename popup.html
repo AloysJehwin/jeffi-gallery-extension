@@ -168,7 +168,19 @@
     .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .log-header span { font-size: 12px; font-weight: 700; color: #374151; }
     .clear-btn { font-size: 11px; color: #9ca3af; background: none; border: none; cursor: pointer; }
-    .clear-btn:hover { color: #dc2626; }
+    select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 12px;
+      background: #fff;
+      color: #111827;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    select:focus { border-color: #6366f1; }
+    .cat-loading { font-size: 11px; color: #9ca3af; margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -186,6 +198,10 @@
       </div>
       <label for="nameInput">Image Name</label>
       <input type="text" id="nameInput" placeholder="e.g. red-valve-50mm" />
+      <label for="categorySelect">Category</label>
+      <select id="categorySelect">
+        <option value="">No category</option>
+      </select>
       <div class="upload-actions">
         <button class="btn-cancel" id="cancelUpload">Cancel</button>
         <button class="primary" id="doUpload">Save to Gallery</button>

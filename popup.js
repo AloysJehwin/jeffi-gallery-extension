@@ -23,6 +23,26 @@ function showUploadView(srcUrl) {
   } catch {}
   setTimeout(() => { nameInput.focus(); nameInput.select() }, 50)
 
+  chrome.storage.local.get(['apiUrl', 'adminToken'], ({ apiUrl, adminToken }) => {
+    if (apiUrl && adminToken) {
+      fetch(`${apiUrl}/api/categories`, {
+        headers: { 'Authorization': `Bearer ${adminToken}` },
+      })
+        .then(r => r.json())
+        .then(data => {
+          const select = document.getElementById('categorySelect')
+          select.innerHTML = '<option value="">No category</option>'
+          ;(data.categories || []).forEach(c => {
+            const opt = document.createElement('option')
+            opt.value = c.id
+            opt.textContent = c.name
+            select.appendChild(opt)
+          })
+        })
+        .catch(() => {})
+    }
+  })
+
   document.getElementById('backBtn').addEventListener('click', dismissUploadView)
   document.getElementById('cancelUpload').addEventListener('click', dismissUploadView)
 
@@ -42,6 +62,7 @@ function dismissUploadView() {
 
 async function doUpload(srcUrl) {
   const name = document.getElementById('nameInput').value.trim()
+  const categoryId = document.getElementById('categorySelect').value || null
   const msg = document.getElementById('uploadMsg')
   const saveBtn = document.getElementById('doUpload')
 
@@ -66,7 +87,7 @@ async function doUpload(srcUrl) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken}`,
       },
-      body: JSON.stringify({ imageUrl: srcUrl, customName: name }),
+      body: JSON.stringify({ imageUrl: srcUrl, customName: name, categoryId }),
     })
 
     if (!res.ok) {
