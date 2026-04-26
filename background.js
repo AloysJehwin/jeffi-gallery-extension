@@ -15,8 +15,8 @@ chrome.contextMenus.onClicked.addListener((info) => {
   chrome.windows.create({
     url: dialogUrl,
     type: 'popup',
-    width: 332,
-    height: 320,
+    width: 400,
+    height: 380,
     focused: true,
   })
 })
