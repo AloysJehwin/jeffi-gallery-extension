@@ -1,3 +1,104 @@
+const viewUpload = document.getElementById('view-upload')
+const viewMain = document.getElementById('view-main')
+
+chrome.storage.local.get(['pendingUpload'], ({ pendingUpload }) => {
+  if (pendingUpload) {
+    showUploadView(pendingUpload)
+  }
+})
+
+function showUploadView(srcUrl) {
+  viewUpload.classList.add('active')
+  viewMain.classList.add('hidden')
+
+  const img = document.getElementById('previewImg')
+  img.src = srcUrl
+  img.onerror = () => {
+    img.parentElement.innerHTML = '<span class="no-preview">Preview unavailable</span>'
+  }
+
+  const nameInput = document.getElementById('nameInput')
+  try {
+    nameInput.value = new URL(srcUrl).hostname.replace('www.', '')
+  } catch {}
+  setTimeout(() => { nameInput.focus(); nameInput.select() }, 50)
+
+  document.getElementById('backBtn').addEventListener('click', dismissUploadView)
+  document.getElementById('cancelUpload').addEventListener('click', dismissUploadView)
+
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('doUpload').click()
+    if (e.key === 'Escape') dismissUploadView()
+  })
+
+  document.getElementById('doUpload').addEventListener('click', () => doUpload(srcUrl))
+}
+
+function dismissUploadView() {
+  chrome.storage.local.remove('pendingUpload')
+  viewUpload.classList.remove('active')
+  viewMain.classList.remove('hidden')
+}
+
+async function doUpload(srcUrl) {
+  const name = document.getElementById('nameInput').value.trim()
+  const msg = document.getElementById('uploadMsg')
+  const saveBtn = document.getElementById('doUpload')
+
+  if (!name) {
+    setMsg(msg, 'Please enter a name.', 'err')
+    return
+  }
+
+  const { apiUrl, adminToken } = await chrome.storage.local.get(['apiUrl', 'adminToken'])
+  if (!apiUrl || !adminToken) {
+    setMsg(msg, 'Configure API URL and token in Settings first.', 'err')
+    return
+  }
+
+  saveBtn.disabled = true
+  setMsg(msg, 'Uploading...', 'info')
+
+  try {
+    const res = await fetch(`${apiUrl}/api/gallery/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ imageUrl: srcUrl, customName: name }),
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `Server error ${res.status}`)
+    }
+
+    const data = await res.json()
+    pushLog({ name, sourceUrl: srcUrl, thumbnailUrl: data.thumbnail_url || '', timestamp: Date.now(), status: 'success' })
+    setMsg(msg, 'Saved to gallery!', 'ok')
+    chrome.storage.local.remove('pendingUpload')
+    setTimeout(() => window.close(), 1000)
+  } catch (err) {
+    pushLog({ name, sourceUrl: srcUrl, thumbnailUrl: '', timestamp: Date.now(), status: 'error', error: err.message })
+    setMsg(msg, err.message || 'Upload failed', 'err')
+    saveBtn.disabled = false
+  }
+}
+
+function pushLog(entry) {
+  chrome.storage.local.get(['uploadLogs'], ({ uploadLogs }) => {
+    const logs = uploadLogs || []
+    logs.unshift(entry)
+    chrome.storage.local.set({ uploadLogs: logs.slice(0, 50) })
+  })
+}
+
+function setMsg(el, text, type) {
+  el.textContent = text
+  el.className = 'msg ' + type
+}
+
 const tabs = document.querySelectorAll('.tab')
 const panels = document.querySelectorAll('.panel')
 
@@ -13,50 +114,38 @@ tabs.forEach(tab => {
 
 const apiUrlInput = document.getElementById('apiUrl')
 const adminTokenInput = document.getElementById('adminToken')
-const saveBtn = document.getElementById('save')
-const status = document.getElementById('status')
+const settingsMsg = document.getElementById('settingsMsg')
 
 chrome.storage.local.get(['apiUrl', 'adminToken'], ({ apiUrl, adminToken }) => {
   if (apiUrl) apiUrlInput.value = apiUrl
   if (adminToken) adminTokenInput.value = adminToken
 })
 
-saveBtn.addEventListener('click', () => {
+document.getElementById('saveSettings').addEventListener('click', () => {
   const apiUrl = apiUrlInput.value.trim().replace(/\/$/, '')
   const adminToken = adminTokenInput.value.trim()
-  if (!apiUrl) { showStatus('API URL is required.', true); return }
-  if (!adminToken) { showStatus('Admin token is required.', true); return }
-  chrome.storage.local.set({ apiUrl, adminToken }, () => showStatus('Settings saved.', false))
+  if (!apiUrl) { setMsg(settingsMsg, 'API URL is required.', 'err'); return }
+  if (!adminToken) { setMsg(settingsMsg, 'Admin token is required.', 'err'); return }
+  chrome.storage.local.set({ apiUrl, adminToken }, () => setMsg(settingsMsg, 'Settings saved.', 'ok'))
 })
-
-function showStatus(msg, isError) {
-  status.textContent = msg
-  status.className = isError ? 'error' : ''
-  setTimeout(() => { status.textContent = '' }, 2500)
-}
 
 function renderLogs() {
   chrome.storage.local.get(['uploadLogs'], ({ uploadLogs }) => {
     const logs = uploadLogs || []
     const list = document.getElementById('logList')
-    if (logs.length === 0) {
-      list.innerHTML = '<div class="empty">No uploads yet.</div>'
-      return
-    }
+    if (!logs.length) { list.innerHTML = '<div class="empty">No uploads yet.</div>'; return }
     list.innerHTML = logs.map(log => {
-      const time = new Date(log.timestamp).toLocaleString()
       const thumb = log.thumbnailUrl
-        ? `<img class="log-thumb" src="${log.thumbnailUrl}" onerror="this.outerHTML='<div class=log-thumb-placeholder></div>'" />`
-        : '<div class="log-thumb-placeholder"></div>'
-      return `
-        <div class="log-item">
-          ${thumb}
-          <div class="log-info">
-            <div class="log-name" title="${log.name}">${log.name}</div>
-            <div class="log-time">${time}</div>
-          </div>
-          <span class="log-status ${log.status}">${log.status === 'success' ? 'OK' : 'ERR'}</span>
-        </div>`
+        ? `<img class="log-thumb" src="${log.thumbnailUrl}" onerror="this.className='log-placeholder'" />`
+        : '<div class="log-placeholder"></div>'
+      return `<div class="log-item">
+        ${thumb}
+        <div class="log-info">
+          <div class="log-name" title="${log.name}">${log.name}</div>
+          <div class="log-time">${new Date(log.timestamp).toLocaleString()}</div>
+        </div>
+        <span class="badge ${log.status === 'success' ? 'ok' : 'err'}">${log.status === 'success' ? 'OK' : 'ERR'}</span>
+      </div>`
     }).join('')
   })
 }

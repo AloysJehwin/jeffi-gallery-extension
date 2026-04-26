@@ -6,17 +6,9 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
-chrome.contextMenus.onClicked.addListener((info) => {
+chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== 'save-to-gallery') return
 
-  const src = encodeURIComponent(info.srcUrl || '')
-  const dialogUrl = chrome.runtime.getURL(`dialog.html?src=${src}`)
-
-  chrome.windows.create({
-    url: dialogUrl,
-    type: 'popup',
-    width: 400,
-    height: 380,
-    focused: true,
-  })
+  await chrome.storage.local.set({ pendingUpload: info.srcUrl || '' })
+  await chrome.action.openPopup()
 })

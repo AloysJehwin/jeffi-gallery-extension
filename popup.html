@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jeffi Gallery Uploader</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,8 +19,19 @@
       background: #fff;
       border-bottom: 1px solid #e5e7eb;
     }
-    .header img { width: 28px; height: 28px; border-radius: 4px; }
-    .header h1 { font-size: 14px; font-weight: 700; color: #1f2937; }
+    .header img { width: 26px; height: 26px; border-radius: 4px; }
+    .header h1 { font-size: 13px; font-weight: 700; color: #1f2937; flex: 1; }
+    .header .back-btn {
+      font-size: 12px;
+      color: #6b7280;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .header .back-btn:hover { background: #f3f4f6; color: #111827; }
+
     .tabs {
       display: flex;
       border-bottom: 1px solid #e5e7eb;
@@ -42,6 +52,7 @@
       border-right: none;
     }
     .tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+
     .panel { display: none; padding: 14px 16px; }
     .panel.active { display: block; }
 
@@ -54,7 +65,7 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    input {
+    input[type="text"], input[type="url"], input[type="password"] {
       width: 100%;
       padding: 7px 10px;
       border: 1px solid #d1d5db;
@@ -66,7 +77,6 @@
       outline: none;
     }
     input:focus { border-color: #6366f1; }
-    .hint { font-size: 11px; color: #9ca3af; margin-top: -6px; margin-bottom: 10px; }
 
     button.primary {
       width: 100%;
@@ -80,16 +90,55 @@
       cursor: pointer;
     }
     button.primary:hover { background: #4f46e5; }
-    #status {
+    button.primary:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    .msg {
       margin-top: 8px;
       font-size: 12px;
       text-align: center;
       min-height: 16px;
-      color: #16a34a;
     }
-    #status.error { color: #dc2626; }
+    .msg.ok { color: #16a34a; }
+    .msg.err { color: #dc2626; }
+    .msg.info { color: #6366f1; }
 
-    .log-list { max-height: 320px; overflow-y: auto; }
+    /* Upload view */
+    #view-upload { display: none; }
+    #view-upload.active { display: block; }
+    #view-main { display: block; }
+    #view-main.hidden { display: none; }
+
+    .preview-wrap {
+      width: 100%;
+      height: 150px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .preview-wrap .no-preview { font-size: 11px; color: #9ca3af; }
+
+    .upload-actions { display: flex; gap: 8px; }
+    .upload-actions button { flex: 1; }
+    .btn-cancel {
+      padding: 8px;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cancel:hover { background: #e5e7eb; }
+
+    /* Logs */
+    .log-list { max-height: 280px; overflow-y: auto; }
     .log-item {
       display: flex;
       align-items: flex-start;
@@ -99,82 +148,80 @@
     }
     .log-item:last-child { border-bottom: none; }
     .log-thumb {
-      width: 40px;
-      height: 40px;
+      width: 38px; height: 38px;
       border-radius: 4px;
       object-fit: cover;
       background: #e5e7eb;
       flex-shrink: 0;
     }
-    .log-thumb-placeholder {
-      width: 40px;
-      height: 40px;
-      border-radius: 4px;
-      background: #e5e7eb;
-      flex-shrink: 0;
-    }
+    .log-placeholder { width: 38px; height: 38px; border-radius: 4px; background: #e5e7eb; flex-shrink: 0; }
     .log-info { flex: 1; min-width: 0; }
-    .log-name {
-      font-size: 12px;
-      font-weight: 600;
-      color: #111827;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .log-name { font-size: 12px; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .log-time { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-    .log-status {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 999px;
-      flex-shrink: 0;
-      margin-top: 2px;
+    .badge {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 6px; border-radius: 999px; flex-shrink: 0; margin-top: 2px;
     }
-    .log-status.success { background: #dcfce7; color: #15803d; }
-    .log-status.error { background: #fee2e2; color: #b91c1c; }
+    .badge.ok { background: #dcfce7; color: #15803d; }
+    .badge.err { background: #fee2e2; color: #b91c1c; }
     .empty { text-align: center; color: #9ca3af; font-size: 12px; padding: 24px 0; }
-    .clear-btn {
-      font-size: 11px;
-      color: #6b7280;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px 0;
-      float: right;
-    }
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .log-header span { font-size: 12px; font-weight: 700; color: #374151; }
+    .clear-btn { font-size: 11px; color: #9ca3af; background: none; border: none; cursor: pointer; }
     .clear-btn:hover { color: #dc2626; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="icons/48.png" alt="logo" />
-    <h1>Jeffi Gallery Uploader</h1>
-  </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="settings">Settings</button>
-    <button class="tab" data-tab="logs">Logs</button>
-  </div>
-
-  <div id="panel-settings" class="panel active">
-    <label for="apiUrl">API URL</label>
-    <input type="url" id="apiUrl" placeholder="https://jeffistores.in" />
-
-    <label for="adminToken">Admin Token</label>
-    <input type="password" id="adminToken" placeholder="Paste token from Admin Settings" />
-
-    <button class="primary" id="save">Save Settings</button>
-    <div id="status"></div>
-  </div>
-
-  <div id="panel-logs" class="panel">
-    <div style="overflow:hidden;margin-bottom:8px;">
-      <span style="font-size:12px;font-weight:700;color:#374151;">Recent Uploads</span>
-      <button class="clear-btn" id="clearLogs">Clear</button>
+  <!-- Upload view (shown when triggered from context menu) -->
+  <div id="view-upload">
+    <div class="header">
+      <img src="icons/48.png" alt="logo" />
+      <h1>Save to Gallery</h1>
+      <button class="back-btn" id="backBtn">✕</button>
     </div>
-    <div class="log-list" id="logList">
-      <div class="empty">No uploads yet.</div>
+    <div style="padding: 14px 16px;">
+      <div class="preview-wrap">
+        <img id="previewImg" src="" alt="" />
+      </div>
+      <label for="nameInput">Image Name</label>
+      <input type="text" id="nameInput" placeholder="e.g. red-valve-50mm" />
+      <div class="upload-actions">
+        <button class="btn-cancel" id="cancelUpload">Cancel</button>
+        <button class="primary" id="doUpload">Save to Gallery</button>
+      </div>
+      <div class="msg" id="uploadMsg"></div>
+    </div>
+  </div>
+
+  <!-- Main view (Settings + Logs tabs) -->
+  <div id="view-main">
+    <div class="header">
+      <img src="icons/48.png" alt="logo" />
+      <h1>Jeffi Gallery Uploader</h1>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="settings">Settings</button>
+      <button class="tab" data-tab="logs">Logs</button>
+    </div>
+
+    <div id="panel-settings" class="panel active">
+      <label for="apiUrl">API URL</label>
+      <input type="url" id="apiUrl" placeholder="https://jeffistores.in" />
+      <label for="adminToken">Admin Token</label>
+      <input type="password" id="adminToken" placeholder="Paste token from Admin Settings" />
+      <button class="primary" id="saveSettings">Save Settings</button>
+      <div class="msg" id="settingsMsg"></div>
+    </div>
+
+    <div id="panel-logs" class="panel">
+      <div class="log-header">
+        <span>Recent Uploads</span>
+        <button class="clear-btn" id="clearLogs">Clear all</button>
+      </div>
+      <div class="log-list" id="logList">
+        <div class="empty">No uploads yet.</div>
+      </div>
     </div>
   </div>
 
