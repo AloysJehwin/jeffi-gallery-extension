@@ -30,16 +30,20 @@ function showUploadView(srcUrl) {
       })
         .then(r => r.json())
         .then(data => {
-          const select = document.getElementById('categorySelect')
-          select.innerHTML = '<option value="">No category</option>'
+          const ul = document.getElementById('csOptions')
+          ul.innerHTML = '<li class="cs-option cs-selected" data-value="">No category</li>'
           ;(data.categories || []).forEach(c => {
-            const opt = document.createElement('option')
-            opt.value = c.id
-            opt.textContent = c.name
-            select.appendChild(opt)
+            const li = document.createElement('li')
+            li.className = 'cs-option'
+            li.dataset.value = c.id
+            li.textContent = c.name
+            ul.appendChild(li)
           })
+          attachDropdownListeners()
         })
-        .catch(() => {})
+        .catch(() => { attachDropdownListeners() })
+    } else {
+      attachDropdownListeners()
     }
   })
 
@@ -62,7 +66,7 @@ function dismissUploadView() {
 
 async function doUpload(srcUrl) {
   const name = document.getElementById('nameInput').value.trim()
-  const categoryId = document.getElementById('categorySelect').value || null
+  const categoryId = document.getElementById('categoryValue').value || null
   const msg = document.getElementById('uploadMsg')
   const saveBtn = document.getElementById('doUpload')
 
@@ -112,6 +116,38 @@ function pushLog(entry) {
     const logs = uploadLogs || []
     logs.unshift(entry)
     chrome.storage.local.set({ uploadLogs: logs.slice(0, 50) })
+  })
+}
+
+function attachDropdownListeners() {
+  const trigger = document.getElementById('csTrigger')
+  const dropdown = document.getElementById('csDropdown')
+  const label = document.getElementById('csLabel')
+  const valueInput = document.getElementById('categoryValue')
+  if (!trigger || !dropdown) return
+
+  trigger.addEventListener('click', () => {
+    const isOpen = dropdown.classList.contains('open')
+    dropdown.classList.toggle('open', !isOpen)
+    trigger.classList.toggle('open', !isOpen)
+  })
+
+  dropdown.addEventListener('click', e => {
+    const opt = e.target.closest('.cs-option')
+    if (!opt) return
+    dropdown.querySelectorAll('.cs-option').forEach(el => el.classList.remove('cs-selected'))
+    opt.classList.add('cs-selected')
+    label.textContent = opt.textContent.replace('✓', '').trim()
+    valueInput.value = opt.dataset.value || ''
+    dropdown.classList.remove('open')
+    trigger.classList.remove('open')
+  })
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('categoryDropdown')?.contains(e.target)) {
+      dropdown.classList.remove('open')
+      trigger.classList.remove('open')
+    }
   })
 }
 
